@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050817">
+<title>Neon Tic Tac Toe</title>
+<style>
+  :root { color-scheme: dark; --blue:#168cff; --cyan:#00eaff; --red:#ff174f; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100svh; display:grid; place-items:center; padding:20px;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#fff;
+    background:radial-gradient(ellipse at 50% 45%,#10265b 0%,#070d25 42%,#02040d 100%);
+    overflow-x:hidden;
+  }
+  .app { width:min(100%,440px); text-align:center; }
+  .screen { display:none; animation:appear .35s ease both; }
+  .screen.active { display:block; }
+  @keyframes appear { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+  .logo { font-size:clamp(2.4rem,11vw,4rem); font-weight:900; letter-spacing:3px; line-height:1.1;
+    text-shadow:0 0 8px var(--cyan),0 0 24px var(--blue),0 0 48px var(--blue); }
+  .subtitle { color:#b7d9ff; margin:14px 0 34px; letter-spacing:2px; text-transform:uppercase; font-size:.82rem; }
+  button { font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .main-btn {
+    border:1px solid #65dfff; border-radius:14px; padding:15px 34px; min-width:190px;
+    color:white; font-weight:800; font-size:1.05rem; letter-spacing:1px;
+    background:linear-gradient(135deg,#0754b8,#082d78);
+    box-shadow:0 0 12px #008dff,0 0 30px #006eff70,inset 0 0 12px #49dfff40;
+    transition:transform .15s,box-shadow .15s;
+  }
+  .main-btn:active { transform:scale(.97); }
+  .topline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:22px; }
+  .small-btn { border:1px solid #267aff; background:#071b42; color:#dff7ff; border-radius:10px; padding:9px 13px; box-shadow:0 0 12px #087dff55; }
+  .game-title { font-size:1.15rem; font-weight:800; letter-spacing:2px; text-shadow:0 0 12px var(--blue); }
+  .status { min-height:32px; margin:0 0 18px; font-weight:700; color:#d9f5ff; letter-spacing:.6px; }
+  .status .x { color:#ff456d; text-shadow:0 0 10px var(--red); }
+  .status .o { color:#3ff5ff; text-shadow:0 0 10px var(--cyan); }
+  .board {
+    width:min(88vw,390px); aspect-ratio:1; margin:0 auto 24px; display:grid;
+    grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+    background:linear-gradient(135deg,#0a1d4c,#020817);
+    border:2px solid #168cff; box-shadow:0 0 10px #168cff,0 0 28px #087bff80,inset 0 0 24px #087bff22;
+  }
+  .cell {
+    border:0; border-right:2px solid #168cff; border-bottom:2px solid #168cff;
+    background:transparent; display:grid; place-items:center; min-width:0; min-height:0;
+    position:relative; padding:0;
+  }
+  .cell:nth-child(3n) { border-right:0; }
+  .cell:nth-child(n+7) { border-bottom:0; }
+  .cell:focus-visible { outline:3px solid white; outline-offset:-5px; }
+  .mark { width:68%; height:68%; position:relative; display:block; }
+  .mark.x::before,.mark.x::after {
+    content:""; position:absolute; width:9%; height:130%; left:45.5%; top:-15%;
+    border-radius:8px; background:#ff174f; box-shadow:0 0 6px #ff174f,0 0 17px #ff174f,0 0 30px #ff174f;
+  }
+  .mark.x::before { transform:rotate(45deg); }
+  .mark.x::after { transform:rotate(-45deg); }
+  .mark.o {
+    border:clamp(5px,1.4vw,8px) solid #f5ffff; border-radius:50%;
+    box-shadow:0 0 6px #fff,0 0 16px #00dfff,0 0 28px #008cff;
+  }
+  .cell:disabled { cursor:default; }
+  .actions { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; }
+  .result { font-size:1.25rem; font-weight:800; min-height:34px; margin:0 0 16px; }
+  .hint { color:#8daed8; font-size:.8rem; margin-top:25px; }
+  @media (max-width:380px) { body{padding:14px} .board{width:min(92vw,350px)} .small-btn{padding:8px 10px} }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<main class="app">
+  <section id="home" class="screen active" aria-label="Home screen">
+    <div class="logo">TIC TAC<br>TOE</div>
+    <p class="subtitle">Neon challenge</p>
+    <button class="main-btn" id="startBtn">START GAME</button>
+    <p class="hint">Two players · One device · Take turns</p>
+  </section>
+
+  <section id="game" class="screen" aria-label="Game screen">
+    <div class="topline">
+      <button class="small-btn" id="homeBtn">← Home</button>
+      <div class="game-title">NEON TIC TAC TOE</div>
+      <button class="small-btn" id="resetBtn">Restart</button>
+    </div>
+    <p class="status" id="status" aria-live="polite">Player <span class="x">X</span>'s turn</p>
+    <div class="board" id="board" role="group" aria-label="Tic tac toe board">
+      <button class="cell" aria-label="Row 1, column 1"></button>
+      <button class="cell" aria-label="Row 1, column 2"></button>
+      <button class="cell" aria-label="Row 1, column 3"></button>
+      <button class="cell" aria-label="Row 2, column 1"></button>
+      <button class="cell" aria-label="Row 2, column 2"></button>
+      <button class="cell" aria-label="Row 2, column 3"></button>
+      <button class="cell" aria-label="Row 3, column 1"></button>
+      <button class="cell" aria-label="Row 3, column 2"></button>
+      <button class="cell" aria-label="Row 3, column 3"></button>
+    </div>
+    <p class="result" id="result" aria-live="polite"></p>
+    <div class="actions"><button class="main-btn" id="playAgainBtn">PLAY AGAIN</button></div>
+    <p class="hint">X = red · O = blue neon</p>
+  </section>
+</main>
+<script>
+(() => {
+  const home = document.getElementById('home');
+  const game = document.getElementById('game');
+  const cells = [...document.querySelectorAll('.cell')];
+  const status = document.getElementById('status');
+  const result = document.getElementById('result');
+  const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  let board = Array(9).fill('');
+  let current = 'X';
+  let finished = false;
+
+  function show(which) {
+    home.classList.toggle('active', which === 'home');
+    game.classList.toggle('active', which === 'game');
+  }
+  function setTurn() {
+    status.innerHTML = `Player <span class="${current.toLowerCase()}">${current}</span>'s turn`;
+  }
+  function reset() {
+    board = Array(9).fill('');
+    current = 'X';
+    finished = false;
+    result.textContent = '';
+    cells.forEach((cell, i) => {
+      cell.innerHTML = '';
+      cell.disabled = false;
+      cell.setAttribute('aria-label', `Row ${Math.floor(i/3)+1}, column ${i%3+1}`);
+    });
+    setTurn();
+  }
+  function play(index) {
+    if (finished || board[index]) return;
+    board[index] = current;
+    const mark = document.createElement('span');
+    mark.className = `mark ${current.toLowerCase()}`;
+    mark.setAttribute('aria-hidden', 'true');
+    cells[index].appendChild(mark);
+    cells[index].disabled = true;
+    cells[index].setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${current}`);
+    const winningLine = wins.find(line => line.every(i => board[i] === current));
+    if (winningLine) {
+      finished = true;
+      status.textContent = 'GAME OVER';
+      result.textContent = `Player ${current} wins! 🎉`;
+      cells.forEach(cell => cell.disabled = true);
+      return;
+    }
+    if (board.every(Boolean)) {
+      finished = true;
+      status.textContent = 'GAME OVER';
+      result.textContent = "It's a draw!";
+      return;
+    }
+    current = current === 'X' ? 'O' : 'X';
+    setTurn();
+  }
+  cells.forEach((cell, i) => cell.addEventListener('click', () => play(i)));
+  document.getElementById('startBtn').addEventListener('click', () => { reset(); show('game'); });
+  document.getElementById('homeBtn').addEventListener('click', () => show('home'));
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  document.getElementById('playAgainBtn').addEventListener('click', reset);
+})();
+</script>
+</body>
+</html>
